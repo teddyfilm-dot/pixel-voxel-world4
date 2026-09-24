@@ -788,8 +788,8 @@ if(bypassArmor){
   // 이그니티움 4부위 완성: 피해 99% 감소
   protectedDamage=amount*(1-0.99);
 }else if(ignitiumPieceCount>0){
-  // 이그니티움 1~3부위: 피해 90% 감소
-  protectedDamage=amount*(1-0.90);
+  // 이그니티움 1~3부위: 피해 95% 감소
+  protectedDamage=amount*(1-0.95);
 }else if(armorTier>0){
   protectedDamage=amount*armorStats[armorTier].reduction;
 }else{
@@ -3131,7 +3131,7 @@ function mpGear(){
   if(ignitiumHelmet||ignitiumChest||ignitiumLeggings||ignitiumBoots)return 'ignitium';
   return 'normal';
 }
-function mpLoadout(){return {gear:mpGear(),swordTier:Number(swordTier)||0,armorTier:Number(armorTier)||0,ignitium:[!!ignitiumHelmet,!!ignitiumChest,!!ignitiumLeggings,!!ignitiumBoots],ignitiumDragonUpgraded:!!ignitiumDragonUpgraded,incinerator:!!incineratorBulwark,incineratorUpgraded:!!incineratorUpgraded};}
+function mpLoadout(){return {gear:mpGear(),swordTier:Number(swordTier)||0,armorTier:Number(armorTier)||0,ignitium:[!!ignitiumHelmet,!!ignitiumChest,!!ignitiumLeggings,!!ignitiumBoots],incinerator:!!incineratorBulwark,incineratorUpgraded:!!incineratorUpgraded,ignitiumDragonUpgraded:!!ignitiumDragonUpgraded};}
 function mpConnect(){
   if(MP.connected||MP.socket&&MP.socket.readyState===WebSocket.CONNECTING)return;
   if(location.protocol!=='http:'&&location.protocol!=='https:'){mpStatus('🌐 멀티플레이: 서버 주소로 실행하세요');return;}
@@ -3151,8 +3151,7 @@ function mpCreateRemote(p){
   makeHumanoid(g,0xf0b892,armorColor,gear==='normal'||gear==='sword'?(swordStats[p.swordTier]||swordStats[1]).color:null);
   if(gear==='ignitium')addArenaIgnitiumArmor(g);
   if(gear==='incinerator')addArenaIncinerator(g);
-  // 서버의 y=2.6은 플레이어 눈높이. 지면은 y=1이고 makeHumanoid의 발 최저점은 로컬 y=0.45이므로 group y=0.55가 정확한 발 착지점이다.
-  g.position.set(Number(p.x)||0,(Number(p.y)||2.6)-2.05,Number(p.z)||0);
+  g.position.set(Number(p.x)||0,(Number(p.y)||2.6)-3.05,Number(p.z)||0);
   g.userData.mpPlayerId=p.id;
   g.frustumCulled=false;
   g.traverse(part=>{part.visible=true;part.frustumCulled=false;});
@@ -3162,9 +3161,9 @@ function mpCreateRemote(p){
 function mpUpdateRemote(p){
   if(p.id===MP.myId)return;
   let r=MP.remote.get(p.id);
-  const gearKey=(p.gear||'normal')+'|'+(p.swordTier||0)+'|'+(p.armorTier||0)+'|'+JSON.stringify(p.ignitium||[])+'|'+(p.ignitiumDragonUpgraded?'1':'0')+'|'+(p.incineratorUpgraded?'1':'0');
+  const gearKey=(p.gear||'normal')+'|'+(p.swordTier||0)+'|'+(p.armorTier||0)+'|'+JSON.stringify(p.ignitium||[])+'|'+(p.incineratorUpgraded?'1':'0');
   if(!r||r.gearKey!==gearKey){if(r)scene.remove(r.group);r={group:mpCreateRemote(p),gearKey};MP.remote.set(p.id,r);}
-  r.group.position.set(Number(p.x)||0,(Number(p.y)||2.6)-2.05,Number(p.z)||0);
+  r.group.position.set(Number(p.x)||0,(Number(p.y)||2.6)-3.05,Number(p.z)||0);
   r.group.rotation.y=Number(p.rotationY)||0;
   r.group.visible=true;r.group.frustumCulled=false;r.group.traverse(part=>{part.visible=true;part.frustumCulled=false;});
   r.name=p.name||('플레이어 '+p.id);r.hp=p.hp;r.dueling=!!p.dueling;r.gear=p.gear||'normal';
@@ -3211,7 +3210,7 @@ function mpMessage(m){
   if(m.type==='challengeRejected'){mpToast((m.fromName||'상대')+'님이 대결을 거절했습니다.');return;}
   if(m.type==='duelStart'){mpBeginDuel(m);return;}
   if(m.type==='pvpDamage'){
-    if(m.targetId===MP.myId){health=Math.max(0,Math.min(MAX_HEALTH,Number(m.hp)||0));if(health<=0)health=0;renderer.setClearColor(0xff0000);if(window._mpLocalDamageFlashTimer)clearTimeout(window._mpLocalDamageFlashTimer);window._mpLocalDamageFlashTimer=setTimeout(()=>{const bg=(currentWorld===4)?0x87CEEB:0x87CEEB;renderer.setClearColor(bg);if(scene.fog)scene.fog.color.setHex(bg);window._mpLocalDamageFlashTimer=null;},150);updateHUD();}
+    if(m.targetId===MP.myId){health=Math.max(1,Math.min(MAX_HEALTH,Number(m.hp)||0));renderer.setClearColor(0xff0000);if(window._mpLocalDamageFlashTimer)clearTimeout(window._mpLocalDamageFlashTimer);window._mpLocalDamageFlashTimer=setTimeout(()=>{const bg=(currentWorld===4)?0x87CEEB:0x87CEEB;renderer.setClearColor(bg);if(scene.fog)scene.fog.color.setHex(bg);window._mpLocalDamageFlashTimer=null;},150);updateHUD();}
     if(m.targetId!==MP.myId){
       const hitRemote=MP.remote.get(m.targetId);
       if(hitRemote&&hitRemote.group&&hitRemote.group.parent){
@@ -3279,14 +3278,24 @@ window._mpPvpAttack=function(){
     weapon='sword';sTier=swordTier;
   }else return;
   const target=MP.remote.get(MP.duelOpponentId);if(!target||!target.group.parent)return;
-  const d=Math.hypot(target.group.position.x-camera.position.x,target.group.position.z-camera.position.z);if(d>8.5)return;
+  const d=Math.hypot(target.group.position.x-camera.position.x,target.group.position.z-camera.position.z);if(d>15.0)return;
   mpSend({type:'pvpAttack',targetId:MP.duelOpponentId,weapon,swordTier:sTier,attackKind,rotationY:yaw});
 };
 function mpEndDuel(m){
-  if(!MP.duelActive)return;MP.duelActive=false;MP.duelId=null;MP.duelOpponentId=null;window._mpPvpDuelActive=false;
+  if(!MP.duelActive)return;
+  MP.duelActive=false;MP.duelId=null;MP.duelOpponentId=null;window._mpPvpDuelActive=false;
   if(MP.duelRoom){scene.remove(MP.duelRoom);MP.duelRoom=null;}window._mpDuelRoom=null;
-  if(m.returnPos){camera.position.set(Number(m.returnPos.x)||arenaShopX,2.6,Number(m.returnPos.z)||arenaShopZ+8);playerY=2.6;}
-  health=Math.max(1,Math.min(MAX_HEALTH,health));updateHUD();
+  // 월드4 PvP 종료 후에는 일반 월드의 사망/리스폰 시스템을 사용하지 않는다.
+  // 승자와 패자 모두 월드4 상점 근처로 돌아가고 체력을 완전히 회복한다.
+  if(currentWorld!==4)currentWorld=4;
+  if(typeof arenaWorldInitialized!=='undefined'&&!arenaWorldInitialized)initArenaWorld();
+  const sx=(typeof arenaShopX==='number'?arenaShopX:1100);
+  const sz=(typeof arenaShopZ==='number'?arenaShopZ:1100);
+  camera.position.set(sx,2.6,sz+8);playerY=2.6;
+  health=MAX_HEALTH;hunger=MAX_HUNGER;saturation=5;isDead=false;
+  const ds=document.getElementById('death-screen');if(ds)ds.style.display='none';
+  renderer.setClearColor(0x87CEEB);if(scene&&scene.fog)scene.fog.color.setHex(0x87CEEB);scene.fog.far=180;
+  updateHUD();
   mpToast(m.win?'🏆 승리!':'💀 패배!',1800);
 }
 document.getElementById('mp-accept').addEventListener('click',()=>{

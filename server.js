@@ -31,7 +31,7 @@ const usedRoomSlots = new Set();
 let nextId = 1;
 let nextDuelId = 1;
 
-const SWORD_DAMAGE = {1:1, 2:3, 3:5, 4:10, 5:25, 6:50};
+const SWORD_DAMAGE = {1:20, 2:50, 3:100, 4:200, 5:500, 6:1000};
 const ARMOR_REDUCTION = {0:1, 1:0.9, 2:0.7, 3:0.5, 4:0.2, 5:0.1};
 
 function send(ws, obj) {
@@ -54,8 +54,6 @@ function publicPlayer(p) {
     swordTier: p.loadout.swordTier,
     armorTier: p.loadout.armorTier,
     ignitium: p.loadout.ignitium,
-    ignitiumDragonUpgraded: !!p.loadout.ignitiumDragonUpgraded,
-    incineratorUpgraded: !!p.loadout.incineratorUpgraded,
     dueling: !!p.duelId,
     shieldUntil: p.shieldUntil
   };
@@ -78,9 +76,9 @@ function sanitizeLoadout(l) {
     swordTier: Math.max(0, Math.min(6, Math.floor(Number(l.swordTier)||0))),
     armorTier: Math.max(0, Math.min(5, Math.floor(Number(l.armorTier)||0))),
     ignitium: Array.isArray(l.ignitium) ? l.ignitium.slice(0,4).map(Boolean) : [false,false,false,false],
-    ignitiumDragonUpgraded: !!l.ignitiumDragonUpgraded,
     incinerator: !!l.incinerator,
-    incineratorUpgraded: !!l.incineratorUpgraded
+    incineratorUpgraded: !!l.incineratorUpgraded,
+    ignitiumDragonUpgraded: !!l.ignitiumDragonUpgraded
   };
 }
 function distance(a,b) { return Math.hypot(a.x-b.x, a.z-b.z); }
@@ -114,8 +112,8 @@ function startDuel(a,b) {
   }
   const id = String(nextDuelId++);
   const duel = {id, a:a.id, b:b.id, roomSlot, lastAttack:new Map(), returnPos:{
-    [a.id]:{x:a.x,y:a.y,z:a.z},
-    [b.id]:{x:b.x,y:b.y,z:b.z}
+    [a.id]:{x:1100,y:2.6,z:1108},
+    [b.id]:{x:1100,y:2.6,z:1108}
   }};
   duels.set(id, duel); a.duelId=id; b.duelId=id;
   const bx = 1500 + roomSlot*25, bz=1500;
@@ -151,16 +149,18 @@ function handleReject(ws,p) {
 function handleAttack(p,msg) {
   if (!p.duelId) return;
   const d=duels.get(p.duelId); if(!d)return;
-  const targetId = String(msg.targetId);
-  const opponent = players.get(targetId);
-  if (!opponent || (d.a!==p.id && d.b!==p.id) || (d.a!==opponent.id && d.b!==opponent.id)) return;
-  if (opponent.id===p.id || opponent.duelId!==p.duelId) return;
+  const targetId=String(msg.targetId);
+  const opponent=players.get(targetId);
+  if(!opponent || (d.a!==p.id && d.b!==p.id) || (d.a!==opponent.id && d.b!==opponent.id)) return;
+  if(opponent.id===p.id || opponent.duelId!==p.duelId) return;
   const now=Date.now(); const last=d.lastAttack.get(p.id)||0;
   if(now-last<350)return;
   d.lastAttack.set(p.id,now);
-  // 결투 시작 간격은 7블록이다. 클라이언트의 최신 위치와 네트워크 지연을 고려해 8.5블록까지 서버 판정을 허용한다.
-  if(distance(p,opponent)>8.5)return;
+
+  // 월드4 소각자/종언의 소각자 사정거리는 15블록.
+  if(distance(p,opponent)>15.0)return;
   if(opponent.shieldUntil>Date.now()){send(p.ws,{type:'shieldBlocked',targetId:opponent.id});return;}
+
   let damage=0,crit=false,attackKind='melee';
   if(msg.weapon==='incinerator' && p.loadout.incinerator){
     const upgraded=!!p.loadout.incineratorUpgraded;
@@ -168,35 +168,42 @@ function handleAttack(p,msg) {
       // 종언의 소각자: 모든 공격이 검기, 500 피해
       attackKind='wave'; crit=true; damage=500;
     }else{
-      // 소각자+불꽃의 보루: 30% 검기 150, 70% 근접 100
+      // 소각자: 30% 검기(150), 70% 근접(100)
       attackKind=msg.attackKind==='wave'?'wave':'melee';
-      crit=attackKind==='wave';
-      damage=attackKind==='wave'?150:100;
+      crit=attackKind==='wave'; damage=attackKind==='wave'?150:100;
     }
   } else if(msg.weapon==='sword' && p.loadout.gear==='sword') {
     const tier=Math.max(1,Math.min(6,Math.floor(Number(msg.swordTier)||p.loadout.swordTier)));
     damage=SWORD_DAMAGE[tier]||0;
   } else return;
 
+  // 이그니티움 방어 수치는 고정:
+  // 1~3부위 = 95% 감소, 4부위 = 99% 감소,
+  // 용의 숨결 강화 = 99.9% 감소 + 50% 확률 완전 무시.
   const pieces=p.loadout.ignitium.filter(Boolean).length;
-  let finalDamage;
+  let finalDamage=damage;
   let ignored=false;
-  if(pieces>=4 && p.loadout.ignitiumDragonUpgraded){
-    // 이그니티움 4부위 + 용의 숨결: 99.9% 감소 + 50% 확률 완전 무시
-    ignored=Math.random()<0.5;
+  if(p.loadout.ignitiumDragonUpgraded && pieces>=4){
+    ignored=Math.random()<0.50;
     finalDamage=ignored?0:damage*0.001;
   }else if(pieces>=4){
-    // 이그니티움 4부위: 99% 감소
     finalDamage=damage*0.01;
   }else if(pieces>0){
-    // 이그니티움 1~3부위: 95% 감소
     finalDamage=damage*0.05;
   }else{
     finalDamage=damage*(ARMOR_REDUCTION[p.loadout.armorTier]||1);
   }
 
   opponent.hp=Math.max(0,opponent.hp-finalDamage);
-  broadcast({type:'pvpDamage',attackerId:p.id,targetId:opponent.id,hp:opponent.hp,damage:finalDamage,crit,attackKind,attackerX:p.x,attackerY:p.y,attackerZ:p.z,attackerRotationY:Number(msg.rotationY)||p.rotationY,incineratorUpgraded:!!p.loadout.incineratorUpgraded,ignored}, q=>q.world===4 && (q.id===p.id||q.id===opponent.id));
+  broadcast({
+    type:'pvpDamage',
+    attackerId:p.id,targetId:opponent.id,hp:opponent.hp,damage:finalDamage,
+    crit,attackKind,
+    attackerX:p.x,attackerY:p.y,attackerZ:p.z,
+    attackerRotationY:Number(msg.rotationY)||p.rotationY,
+    incineratorUpgraded:!!p.loadout.incineratorUpgraded,
+    ignored
+  }, q=>q.world===4 && (q.id===p.id||q.id===opponent.id));
   if(opponent.hp<=0) endDuel(d,p.id,`${p.name} 승리`);
 }
 function handleMessage(ws,p,msg) {
