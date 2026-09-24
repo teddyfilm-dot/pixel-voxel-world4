@@ -2932,6 +2932,7 @@ lastFrameTime=now;
 updateIgnitiumFires();
 updateIncineratorBulwark();
 updateIncineratorWaves();
+updateMpVisualWaves();
 if(currentWorld===4){
   scene.fog.far=180;
   renderer.setClearColor(0x87CEEB);
@@ -3130,7 +3131,7 @@ function mpGear(){
   if(ignitiumHelmet||ignitiumChest||ignitiumLeggings||ignitiumBoots)return 'ignitium';
   return 'normal';
 }
-function mpLoadout(){return {gear:mpGear(),swordTier:Number(swordTier)||0,armorTier:Number(armorTier)||0,ignitium:[!!ignitiumHelmet,!!ignitiumChest,!!ignitiumLeggings,!!ignitiumBoots],incinerator:!!incineratorBulwark};}
+function mpLoadout(){return {gear:mpGear(),swordTier:Number(swordTier)||0,armorTier:Number(armorTier)||0,ignitium:[!!ignitiumHelmet,!!ignitiumChest,!!ignitiumLeggings,!!ignitiumBoots],incinerator:!!incineratorBulwark,incineratorUpgraded:!!incineratorUpgraded};}
 function mpConnect(){
   if(MP.connected||MP.socket&&MP.socket.readyState===WebSocket.CONNECTING)return;
   if(location.protocol!=='http:'&&location.protocol!=='https:'){mpStatus('🌐 멀티플레이: 서버 주소로 실행하세요');return;}
@@ -3150,7 +3151,7 @@ function mpCreateRemote(p){
   makeHumanoid(g,0xf0b892,armorColor,gear==='normal'||gear==='sword'?(swordStats[p.swordTier]||swordStats[1]).color:null);
   if(gear==='ignitium')addArenaIgnitiumArmor(g);
   if(gear==='incinerator')addArenaIncinerator(g);
-  g.position.set(p.x||0,p.y?Math.max(0,(p.y-1)):1,p.z||0);
+  g.position.set(Number(p.x)||0,(Number(p.y)||2.6)-3.05,Number(p.z)||0);
   g.userData.mpPlayerId=p.id;
   g.frustumCulled=false;
   g.traverse(part=>{part.visible=true;part.frustumCulled=false;});
@@ -3160,9 +3161,9 @@ function mpCreateRemote(p){
 function mpUpdateRemote(p){
   if(p.id===MP.myId)return;
   let r=MP.remote.get(p.id);
-  const gearKey=(p.gear||'normal')+'|'+(p.swordTier||0)+'|'+(p.armorTier||0)+'|'+JSON.stringify(p.ignitium||[]);
+  const gearKey=(p.gear||'normal')+'|'+(p.swordTier||0)+'|'+(p.armorTier||0)+'|'+JSON.stringify(p.ignitium||[])+'|'+(p.incineratorUpgraded?'1':'0');
   if(!r||r.gearKey!==gearKey){if(r)scene.remove(r.group);r={group:mpCreateRemote(p),gearKey};MP.remote.set(p.id,r);}
-  r.group.position.set(Number(p.x)||0,Math.max(0,(Number(p.y)||2.6)-1),Number(p.z)||0);
+  r.group.position.set(Number(p.x)||0,(Number(p.y)||2.6)-3.05,Number(p.z)||0);
   r.group.rotation.y=Number(p.rotationY)||0;
   r.group.visible=true;r.group.frustumCulled=false;r.group.traverse(part=>{part.visible=true;part.frustumCulled=false;});
   r.name=p.name||('플레이어 '+p.id);r.hp=p.hp;r.dueling=!!p.dueling;r.gear=p.gear||'normal';
@@ -3175,6 +3176,25 @@ function mpRenderList(players=[]){
   box.innerHTML='<div style="font-weight:700;margin-bottom:5px">👥 월드4 온라인: '+(players.length)+'</div>'+(arr.length?arr.map(p=>'<div style="padding:3px 0">🧍 '+escapeHtml(p.name||('플레이어 '+p.id))+(p.dueling?' <span style="color:#f87171">⚔️</span>':'')+'</div>').join(''):'<div style="color:#aaa">다른 플레이어 없음</div>');
 }
 function escapeHtml(s){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function mpSpawnIncineratorWave(attackerId, attackerX, attackerY, attackerZ, rotationY, upgraded){
+  const dir=new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),Number(rotationY)||0).normalize();
+  const wave=new THREE.Mesh(new THREE.BoxGeometry(.22,.95,.62),new THREE.MeshBasicMaterial({color:upgraded?0xc084fc:0xffc400,transparent:true,opacity:.92}));
+  wave.position.set(Number(attackerX)||0,(Number(attackerY)||2.6)-.15,Number(attackerZ)||0).add(dir.clone().multiplyScalar(1.1));
+  wave.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),dir);
+  wave.userData={dir:dir,traveled:0,speed:.32,owner:attackerId};
+  scene.add(wave);
+  if(!window._mpVisualWaves)window._mpVisualWaves=[];
+  window._mpVisualWaves.push(wave);
+}
+function updateMpVisualWaves(){
+  const arr=window._mpVisualWaves||[];
+  for(let i=arr.length-1;i>=0;i--){
+    const w=arr[i];
+    if(!w.parent){arr.splice(i,1);continue;}
+    w.position.addScaledVector(w.userData.dir,w.userData.speed);w.userData.traveled+=w.userData.speed;
+    if(w.userData.traveled>=15){scene.remove(w);arr.splice(i,1);}
+  }
+}
 function mpMessage(m){
   if(m.type==='welcome'){MP.myId=m.id;return;}
   if(m.type==='players'){
@@ -3190,8 +3210,26 @@ function mpMessage(m){
   if(m.type==='challengeRejected'){mpToast((m.fromName||'상대')+'님이 대결을 거절했습니다.');return;}
   if(m.type==='duelStart'){mpBeginDuel(m);return;}
   if(m.type==='pvpDamage'){
-    if(m.targetId===MP.myId){health=Math.max(0,Math.min(MAX_HEALTH,Number(m.hp)||0));if(health<=0)health=0;renderer.setClearColor(0xff0000);setTimeout(()=>{const bg=0x87CEEB;renderer.setClearColor(bg);if(scene.fog)scene.fog.color.setHex(bg);},100);updateHUD();}
-    if(m.attackerId===MP.myId&&m.crit)mpToast('⚔️ 치명타! '+m.damage+' 피해',500);
+    if(m.targetId===MP.myId){health=Math.max(0,Math.min(MAX_HEALTH,Number(m.hp)||0));if(health<=0)health=0;renderer.setClearColor(0xff0000);if(window._mpLocalDamageFlashTimer)clearTimeout(window._mpLocalDamageFlashTimer);window._mpLocalDamageFlashTimer=setTimeout(()=>{const bg=(currentWorld===4)?0x87CEEB:0x87CEEB;renderer.setClearColor(bg);if(scene.fog)scene.fog.color.setHex(bg);window._mpLocalDamageFlashTimer=null;},150);updateHUD();}
+    if(m.targetId!==MP.myId){
+      const hitRemote=MP.remote.get(m.targetId);
+      if(hitRemote&&hitRemote.group&&hitRemote.group.parent){
+        if(hitRemote.damageFlashTimer)clearTimeout(hitRemote.damageFlashTimer);
+        const saved=[];
+        hitRemote.group.traverse(part=>{
+          if(part.material&&part.material.color){saved.push({part,color:part.material.color.getHex(),opacity:part.material.opacity,transparent:part.material.transparent});part.material.color.setHex(0xff0000);}
+        });
+        hitRemote.group.userData.damageFlashUntil=Date.now()+180;
+        hitRemote.damageFlashTimer=setTimeout(()=>{
+          saved.forEach(v=>{if(v.part&&v.part.material&&v.part.material.color){v.part.material.color.setHex(v.color);v.part.material.opacity=v.opacity;v.part.material.transparent=v.transparent;}});
+          hitRemote.damageFlashTimer=null;
+        },180);
+      }
+    }
+    if(m.attackKind==='wave' && m.attackerX!==undefined){
+      mpSpawnIncineratorWave(m.attackerId,m.attackerX,m.attackerY,m.attackerZ,m.attackerRotationY,!!m.incineratorUpgraded);
+    }
+    if(m.attackerId===MP.myId&&m.crit)mpToast('⚔️ 검기! '+m.damage+' 피해',500);
     return;
   }
   if(m.type==='shieldBlocked'&&m.targetId===MP.myId){mpToast('🛡️ 불꽃의 보루가 공격을 막았습니다!',700);return;}
@@ -3228,11 +3266,20 @@ function mpCreateDuelRoom(slot){
 function mpStartShield(){if(MP.duelActive){MP.shieldUntil=Date.now()+5000;mpSend({type:'shieldStart'});}}
 window._mpStartShield=mpStartShield;
 window._mpPvpAttack=function(){
-  if(!MP.duelActive||!MP.connected)return;const now=Date.now();if(now-MP.lastAttack<350)return;MP.lastAttack=now;
-  let weapon='none',sTier=0;if(equippedTool==='incinerator'&&incineratorBulwark)weapon='incinerator';else if(equippedTool==='sword'&&swordTier>0){weapon='sword';sTier=swordTier;}else return;
+  if(!MP.duelActive||!MP.connected)return;
+  const now=Date.now();if(now-MP.lastAttack<350)return;MP.lastAttack=now;
+  let weapon='none',sTier=0,attackKind='melee';
+  if(equippedTool==='incinerator'&&incineratorBulwark){
+    weapon='incinerator';
+    // 소각자: 30% 검기(150), 70% 근접(100)
+    // 종언의 소각자: 모든 공격이 검기(500)
+    attackKind=incineratorUpgraded?'wave':(Math.random()<0.30?'wave':'melee');
+  }else if(equippedTool==='sword'&&swordTier>0){
+    weapon='sword';sTier=swordTier;
+  }else return;
   const target=MP.remote.get(MP.duelOpponentId);if(!target||!target.group.parent)return;
   const d=Math.hypot(target.group.position.x-camera.position.x,target.group.position.z-camera.position.z);if(d>5.5)return;
-  mpSend({type:'pvpAttack',targetId:MP.duelOpponentId,weapon,swordTier:sTier});
+  mpSend({type:'pvpAttack',targetId:MP.duelOpponentId,weapon,swordTier:sTier,attackKind,rotationY:yaw});
 };
 function mpEndDuel(m){
   if(!MP.duelActive)return;MP.duelActive=false;MP.duelId=null;MP.duelOpponentId=null;window._mpPvpDuelActive=false;

@@ -54,6 +54,7 @@ function publicPlayer(p) {
     swordTier: p.loadout.swordTier,
     armorTier: p.loadout.armorTier,
     ignitium: p.loadout.ignitium,
+    incineratorUpgraded: !!p.loadout.incineratorUpgraded,
     dueling: !!p.duelId,
     shieldUntil: p.shieldUntil
   };
@@ -76,7 +77,8 @@ function sanitizeLoadout(l) {
     swordTier: Math.max(0, Math.min(6, Math.floor(Number(l.swordTier)||0))),
     armorTier: Math.max(0, Math.min(5, Math.floor(Number(l.armorTier)||0))),
     ignitium: Array.isArray(l.ignitium) ? l.ignitium.slice(0,4).map(Boolean) : [false,false,false,false],
-    incinerator: !!l.incinerator
+    incinerator: !!l.incinerator,
+    incineratorUpgraded: !!l.incineratorUpgraded
   };
 }
 function distance(a,b) { return Math.hypot(a.x-b.x, a.z-b.z); }
@@ -158,7 +160,9 @@ function handleAttack(p,msg) {
   if(opponent.shieldUntil>Date.now()){send(p.ws,{type:'shieldBlocked',targetId:opponent.id});return;}
   let damage=0,crit=false;
   if(msg.weapon==='incinerator' && p.loadout.incinerator){
-    crit=Math.random()<0.30; damage=crit?150:100;
+    const upgraded=!!p.loadout.incineratorUpgraded;
+    if(upgraded){ attackKind='wave'; crit=true; damage=500; }
+    else { attackKind=msg.attackKind==='wave'?'wave':'melee'; crit=attackKind==='wave'; damage=attackKind==='wave'?150:100; }
   } else if(msg.weapon==='sword' && p.loadout.gear==='sword') {
     const tier=Math.max(1,Math.min(6,Math.floor(Number(msg.swordTier)||p.loadout.swordTier)));
     damage=SWORD_DAMAGE[tier]||0;
@@ -167,7 +171,7 @@ function handleAttack(p,msg) {
   const reduction=pieces>=4?0.01:(pieces>0?0.10:(ARMOR_REDUCTION[p.loadout.armorTier]||1));
   const finalDamage=damage*reduction;
   opponent.hp=Math.max(0,opponent.hp-finalDamage);
-  broadcast({type:'pvpDamage',attackerId:p.id,targetId:opponent.id,hp:opponent.hp,damage:finalDamage,crit}, q=>q.world===4 && (q.id===p.id||q.id===opponent.id));
+  broadcast({type:'pvpDamage',attackerId:p.id,targetId:opponent.id,hp:opponent.hp,damage:finalDamage,crit,attackKind,attackerX:p.x,attackerY:p.y,attackerZ:p.z,attackerRotationY:Number(msg.rotationY)||p.rotationY,incineratorUpgraded:!!p.loadout.incineratorUpgraded}, q=>q.world===4 && (q.id===p.id||q.id===opponent.id));
   if(opponent.hp<=0) endDuel(d,p.id,`${p.name} 승리`);
 }
 function handleMessage(ws,p,msg) {
