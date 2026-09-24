@@ -3151,7 +3151,10 @@ function mpCreateRemote(p){
   makeHumanoid(g,0xf0b892,armorColor,gear==='normal'||gear==='sword'?(swordStats[p.swordTier]||swordStats[1]).color:null);
   if(gear==='ignitium')addArenaIgnitiumArmor(g);
   if(gear==='incinerator')addArenaIncinerator(g);
-  g.position.set(Number(p.x)||0,(Number(p.y)||2.6)-3.05,Number(p.z)||0);
+  g.scale.set(1.2,1.2,1.2);
+  // 확대 후에도 발이 월드 바닥(y=0)에 정확히 닿도록 보정
+  const remoteScale=1.2;
+  g.position.set(Number(p.x)||0,(Number(p.y)||2.6)-(2.83*remoteScale),Number(p.z)||0);
   g.userData.mpPlayerId=p.id;
   g.frustumCulled=false;
   g.traverse(part=>{part.visible=true;part.frustumCulled=false;});
@@ -3163,7 +3166,7 @@ function mpUpdateRemote(p){
   let r=MP.remote.get(p.id);
   const gearKey=(p.gear||'normal')+'|'+(p.swordTier||0)+'|'+(p.armorTier||0)+'|'+JSON.stringify(p.ignitium||[])+'|'+(p.incineratorUpgraded?'1':'0');
   if(!r||r.gearKey!==gearKey){if(r)scene.remove(r.group);r={group:mpCreateRemote(p),gearKey};MP.remote.set(p.id,r);}
-  r.group.position.set(Number(p.x)||0,(Number(p.y)||2.6)-3.05,Number(p.z)||0);
+  r.group.position.set(Number(p.x)||0,(Number(p.y)||2.6)-(2.83*1.2),Number(p.z)||0);
   r.group.rotation.y=Number(p.rotationY)||0;
   r.group.visible=true;r.group.frustumCulled=false;r.group.traverse(part=>{part.visible=true;part.frustumCulled=false;});
   r.name=p.name||('플레이어 '+p.id);r.hp=p.hp;r.dueling=!!p.dueling;r.gear=p.gear||'normal';
@@ -3278,7 +3281,7 @@ window._mpPvpAttack=function(){
     weapon='sword';sTier=swordTier;
   }else return;
   const target=MP.remote.get(MP.duelOpponentId);if(!target||!target.group.parent)return;
-  const d=Math.hypot(target.group.position.x-camera.position.x,target.group.position.z-camera.position.z);if(d>5.5)return;
+  const d=Math.hypot(target.group.position.x-camera.position.x,target.group.position.z-camera.position.z);if(d>7.0)return;
   mpSend({type:'pvpAttack',targetId:MP.duelOpponentId,weapon,swordTier:sTier,attackKind,rotationY:yaw});
 };
 function mpEndDuel(m){

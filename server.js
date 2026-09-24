@@ -31,7 +31,7 @@ const usedRoomSlots = new Set();
 let nextId = 1;
 let nextDuelId = 1;
 
-const SWORD_DAMAGE = {1:1, 2:3, 3:5, 4:10, 5:25, 6:50};
+const SWORD_DAMAGE = {1:20, 2:50, 3:100, 4:200, 5:500, 6:1000};
 const ARMOR_REDUCTION = {0:1, 1:0.9, 2:0.7, 3:0.5, 4:0.2, 5:0.1};
 
 function send(ws, obj) {
@@ -156,7 +156,7 @@ function handleAttack(p,msg) {
   const now=Date.now(); const last=d.lastAttack.get(p.id)||0;
   if(now-last<350)return;
   d.lastAttack.set(p.id,now);
-  if(distance(p,opponent)>5.6)return;
+  if(distance(p,opponent)>7.0)return;
   if(opponent.shieldUntil>Date.now()){send(p.ws,{type:'shieldBlocked',targetId:opponent.id});return;}
   let damage=0,crit=false;
   if(msg.weapon==='incinerator' && p.loadout.incinerator){
