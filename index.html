@@ -38,6 +38,24 @@ body{overflow:hidden;font-family:'Space Mono',monospace}
 #mp-accept{background:#4ade80;color:#000}
 #mp-reject{background:#ef4444;color:#fff}
 #mp-toast{position:fixed;top:85px;left:50%;transform:translateX(-50%);z-index:510;background:rgba(0,0,0,.8);color:#fff;padding:8px 14px;border-radius:6px;font-size:13px;display:none}
+
+/* ===== Minecraft-style inventory / hotbar v2 ===== */
+#pvw-hotbar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:700;display:flex;gap:4px;padding:5px;background:rgba(20,20,20,.82);border:2px solid #555;border-radius:6px;box-shadow:0 4px 18px #0008;pointer-events:auto}
+.pvw-hslot{width:54px;height:54px;box-sizing:border-box;position:relative;background:linear-gradient(#3b3b3b,#242424);border:2px solid #777;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pvw-hslot.sel{border-color:#fff;box-shadow:0 0 0 2px #000,0 0 8px #fff8}
+.pvw-hslot .num{position:absolute;top:1px;left:3px;color:#fff;font:bold 10px Arial;text-shadow:1px 1px #000}
+.pvw-hslot img{width:40px;height:40px;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(1px 2px 1px #000)}
+.pvw-hslot .customIcon{font-size:30px;filter:drop-shadow(1px 2px 1px #000)}
+.pvw-hslot .count{position:absolute;right:3px;bottom:1px;color:#fff;font:bold 12px Arial;text-shadow:1px 1px #000}
+#pvw-inventory{position:fixed;inset:0;z-index:650;background:rgba(0,0,0,.64);display:none;align-items:center;justify-content:center;font-family:'Space Mono',monospace}
+#pvw-inventory.open{display:flex}
+#pvw-inventory-panel{width:min(1000px,94vw);height:min(690px,92vh);background:linear-gradient(145deg,#202020,#101010);border:3px solid #777;border-radius:8px;box-shadow:0 15px 50px #000;display:grid;grid-template-columns:210px 300px 1fr;grid-template-rows:1fr 205px;gap:12px;padding:16px;box-sizing:border-box;color:#fff}
+#pvw-armor-area{display:flex;flex-direction:column;gap:7px}.pvw-title{font-size:17px;font-weight:700;margin-bottom:3px}.pvw-sub{font-size:10px;color:#aaa;margin-bottom:4px}
+.pvw-armor-row{display:flex;align-items:center;gap:8px}.pvw-armor-label{width:56px;color:#bbb;font-size:10px}.pvw-aslot{width:62px;height:62px;background:#292929;border:2px solid #777;border-radius:4px;display:flex;align-items:center;justify-content:center}.pvw-aslot img{width:54px;height:54px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(1px 2px 1px #000)}
+#pvw-preview-wrap{background:#111;border:2px solid #555;border-radius:5px;position:relative;min-height:340px;overflow:hidden}.pvw-preview-title{position:absolute;top:8px;left:10px;z-index:2;font-size:12px;color:#ddd}.pvw-preview-stage{position:absolute;inset:30px 0 0}.pvw-preview-stage canvas{width:100%!important;height:100%!important;display:block}
+#pvw-items-area{display:flex;flex-direction:column;min-width:0}.pvw-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:5px}.pvw-slot{height:55px;background:#2c2c2c;border:2px solid #666;border-radius:3px;position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}.pvw-slot img{width:40px;height:40px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(1px 2px 1px #000)}.pvw-slot .customIcon{font-size:29px}.pvw-slot .count{position:absolute;right:3px;bottom:1px;color:#fff;font:bold 11px Arial;text-shadow:1px 1px #000}.pvw-slot.sel{border-color:#fff;box-shadow:inset 0 0 0 2px #222,0 0 7px #fff8}.pvw-slot.move{border-color:#e33;box-shadow:0 0 8px #e33}
+#pvw-detail{grid-column:1/4;background:#151515;border:2px solid #444;border-radius:5px;padding:10px;display:grid;grid-template-columns:120px 1fr 230px;gap:12px;align-items:center}.pvw-detail-icon{width:105px;height:105px;background:#252525;border:2px solid #555;display:flex;align-items:center;justify-content:center}.pvw-detail-icon img{width:86px;height:86px;object-fit:contain;image-rendering:pixelated}.pvw-detail-name{font-size:18px;font-weight:700;color:#ffd36a}.pvw-detail-text{font-size:11px;line-height:1.65;color:#ddd}.pvw-close{position:absolute;right:16px;top:10px;border:0;background:#333;color:#fff;padding:6px 10px;border-radius:4px;cursor:pointer}.pvw-equip{border:1px solid #666;background:#333;color:#fff;padding:8px;border-radius:4px;cursor:pointer}.pvw-note{font-size:10px;color:#aaa;margin-top:5px}
+@media(max-width:850px){#pvw-inventory-panel{grid-template-columns:150px 220px 1fr} .pvw-hslot{width:42px;height:42px}.pvw-hslot img{width:32px;height:32px}.pvw-aslot{width:48px;height:48px}.pvw-aslot img{width:42px;height:42px}.pvw-slot{height:45px}.pvw-slot img{width:32px;height:32px}}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.577.0/dist/umd/lucide.min.js" type="text/javascript"></script>
  </head>
@@ -174,6 +192,24 @@ body{overflow:hidden;font-family:'Space Mono',monospace}
     <button id="mp-reject" type="button">거절</button>
   </div>
   <div id="mp-toast"></div>
+
+  <div id="pvw-hotbar" aria-label="핫바"></div>
+  <div id="pvw-inventory" aria-hidden="true">
+   <div id="pvw-inventory-panel">
+    <button class="pvw-close" id="pvw-inv-close">ESC 닫기</button>
+    <div id="pvw-armor-area">
+      <div class="pvw-title">장비</div><div class="pvw-sub">갑옷을 구매하기 전에는 빈칸입니다.</div>
+      <div class="pvw-armor-row"><span class="pvw-armor-label">투구</span><div class="pvw-aslot" data-armor="helmet"></div></div>
+      <div class="pvw-armor-row"><span class="pvw-armor-label">흉갑</span><div class="pvw-aslot" data-armor="chest"></div></div>
+      <div class="pvw-armor-row"><span class="pvw-armor-label">레깅스</span><div class="pvw-aslot" data-armor="leggings"></div></div>
+      <div class="pvw-armor-row"><span class="pvw-armor-label">부츠</span><div class="pvw-aslot" data-armor="boots"></div></div>
+      <div class="pvw-note">일반 갑옷은 4부위 세트로 구매합니다.<br>이그니티움은 부위별로 표시됩니다.</div>
+    </div>
+    <div id="pvw-preview-wrap"><div class="pvw-preview-title">내 플레이어 모습</div><div class="pvw-preview-stage" id="pvw-preview-stage"></div></div>
+    <div id="pvw-items-area"><div class="pvw-title">인벤토리</div><div class="pvw-sub">방향키: 선택 이동 · Shift: 이동 모드</div><div class="pvw-grid" id="pvw-grid"></div></div>
+    <div id="pvw-detail"><div class="pvw-detail-icon" id="pvw-detail-icon"></div><div><div class="pvw-detail-name" id="pvw-detail-name">아이템을 선택하세요</div><div class="pvw-detail-text" id="pvw-detail-text">E로 인벤토리를 열고 방향키로 선택할 수 있습니다.</div></div><div><button class="pvw-equip" id="pvw-equip" style="display:none">장착하기</button><div id="pvw-equip-note" class="pvw-note"></div></div></div>
+   </div>
+  </div>
   <canvas id="game-canvas"></canvas>
   <script>
 (function(){
@@ -3150,8 +3186,7 @@ function mpCreateRemote(p){
   makeHumanoid(g,0xf0b892,armorColor,gear==='normal'||gear==='sword'?(swordStats[p.swordTier]||swordStats[1]).color:null);
   if(gear==='ignitium')addArenaIgnitiumArmor(g);
   if(gear==='incinerator')addArenaIncinerator(g);
-  g.scale.set(1.3,1.3,1.3);
-  g.position.set(Number(p.x)||0,Number(p.y)-3.2175,Number(p.z)||0);
+  g.position.set(Number(p.x)||0,Number(p.y)-2.8,Number(p.z)||0);
   g.userData.mpPlayerId=p.id;
   g.frustumCulled=false;
   g.traverse(part=>{part.visible=true;part.frustumCulled=false;});
@@ -3163,7 +3198,7 @@ function mpUpdateRemote(p){
   let r=MP.remote.get(p.id);
   const gearKey=(p.gear||'normal')+'|'+(p.swordTier||0)+'|'+(p.armorTier||0)+'|'+JSON.stringify(p.ignitium||[]);
   if(!r||r.gearKey!==gearKey){if(r)scene.remove(r.group);r={group:mpCreateRemote(p),gearKey};MP.remote.set(p.id,r);}
-  r.group.position.set(Number(p.x)||0,Number(p.y)-3.2175,Number(p.z)||0);
+  r.group.position.set(Number(p.x)||0,Number(p.y)-2.8,Number(p.z)||0);
   r.group.rotation.y=Number(p.rotationY)||0;
   r.group.visible=true;r.group.frustumCulled=false;r.group.traverse(part=>{part.visible=true;part.frustumCulled=false;});
   r.name=p.name||('플레이어 '+p.id);r.hp=p.hp;r.dueling=!!p.dueling;r.gear=p.gear||'normal';
@@ -3349,6 +3384,106 @@ window.enterDungeonByCommand=function(){
 
 document.getElementById('respawn-btn').addEventListener('click',()=>respawn());
 document.getElementById('menu-btn').addEventListener('click',()=>{location.reload();});
+
+/* ===== Inventory / hotbar v2: uses the same 3D model functions as World 4 opponents ===== */
+function pvwIconUrl(kind){
+ const palettes={
+  fishing_rod:['#8b5a2b','#d8d8d8'], iron_axe:['#bfc3c7','#6b4b2a'], wheat_seeds:['#d8c15a','#6e9b3b'], cod:['#8d969c','#d9e0e5'],
+  wooden_sword:['#8b5a2b','#c9c9c9'], stone_sword:['#8c9398','#555b60'], iron_sword:['#d8dde0','#777d82'], golden_sword:['#ffd83d','#b88700'], diamond_sword:['#66e6e6','#159b9b'], netherite_sword:['#4b414e','#241e28'],
+  ender_pearl:['#193d55','#8b4cc2'], potion:['#b84bdb','#6d1c8c'], ender_eye:['#3fdc78','#173f8f'], bread:['#d79a45','#8a5420'],
+  leather_helmet:['#9b633c','#5c3825'], iron_helmet:['#bfc3c7','#747a80'], golden_helmet:['#ffd83d','#b88700'], diamond_helmet:['#66e6e6','#159b9b'], netherite_helmet:['#4b414e','#241e28'],
+  leather_chestplate:['#9b633c','#5c3825'], iron_chestplate:['#bfc3c7','#747a80'], golden_chestplate:['#ffd83d','#b88700'], diamond_chestplate:['#66e6e6','#159b9b'], netherite_chestplate:['#4b414e','#241e28'],
+  leather_leggings:['#9b633c','#5c3825'], iron_leggings:['#bfc3c7','#747a80'], golden_leggings:['#ffd83d','#b88700'], diamond_leggings:['#66e6e6','#159b9b'], netherite_leggings:['#4b414e','#241e28'],
+  leather_boots:['#9b633c','#5c3825'], iron_boots:['#bfc3c7','#747a80'], golden_boots:['#ffd83d','#b88700'], diamond_boots:['#66e6e6','#159b9b'], netherite_boots:['#4b414e','#241e28']
+ };
+ const c=(palettes[kind]||['#888','#333']); let body='';
+ if(kind.includes('sword')) body=`<path d="M3 13L11 5l1 1-8 8z" fill="${c[0]}"/><path d="M10 5l2-2 3 3-2 2z" fill="${c[0]}"/><path d="M3 13l3 3-2 1-3-3z" fill="${c[1]}"/>`;
+ else if(kind==='fishing_rod') body=`<path d="M4 14L13 3" stroke="${c[0]}" stroke-width="2"/><path d="M13 3h2v7" stroke="${c[1]}" stroke-width="1.5" fill="none"/><path d="M15 10c0 2-3 2-3 0" stroke="#ddd" fill="none"/>`;
+ else if(kind==='bread') body=`<path d="M3 9c0-3 3-5 6-5s5 2 5 5v4H4z" fill="${c[0]}" stroke="${c[1]}"/><path d="M6 7h1M9 6h1M11 8h1" stroke="#f1c06b" stroke-width="1"/>`;
+ else if(kind==='cod') body=`<path d="M2 9l3-4 7 1 3 3-3 3-7 1z" fill="${c[0]}"/><path d="M2 9L0 6v6z" fill="${c[1]}"/><circle cx="11" cy="8" r="1" fill="#111"/>`;
+ else if(kind.includes('helmet')) body=`<path d="M3 13V8c0-4 2-6 6-6s6 2 6 6v5H11V8H5v5z" fill="${c[0]}" stroke="${c[1]}"/>`;
+ else if(kind.includes('chestplate')) body=`<path d="M5 3h6l4 3-2 10H3L1 6z" fill="${c[0]}" stroke="${c[1]}"/><path d="M8 4v11" stroke="${c[1]}"/>`;
+ else if(kind.includes('leggings')) body=`<path d="M4 2h8l1 6-2 8H8l-1-6-1 6H2l1-8z" fill="${c[0]}" stroke="${c[1]}"/>`;
+ else if(kind.includes('boots')) body=`<path d="M4 2h5v9l5 2v3H8L6 11H3z" fill="${c[0]}" stroke="${c[1]}"/>`;
+ else if(kind==='iron_axe') body=`<path d="M5 15L11 3" stroke="${c[1]}" stroke-width="2"/><path d="M10 3h5v5h-3V6h-2z" fill="${c[0]}"/>`;
+ else if(kind==='wheat_seeds') body=`<path d="M8 15V5M8 8L4 5M8 10l4-3M8 6l3-3" stroke="${c[1]}" stroke-width="2"/><path d="M3 5l2-2 2 2-2 2z" fill="${c[0]}"/>`;
+ else if(kind==='ender_eye') body=`<circle cx="8" cy="8" r="6" fill="${c[0]}"/><circle cx="8" cy="8" r="3" fill="${c[1]}"/><circle cx="8" cy="8" r="1.3" fill="#111"/>`;
+ else if(kind==='ender_pearl') body=`<circle cx="8" cy="8" r="6" fill="${c[1]}"/><circle cx="6" cy="6" r="2" fill="${c[0]}" opacity=".8"/>`;
+ else if(kind==='potion') body=`<path d="M6 2h4v3l2 2v7H4V7l2-2z" fill="${c[0]}" stroke="${c[1]}"/><path d="M5 10h6" stroke="#e9a6ff"/>`;
+ else body=`<rect x="3" y="3" width="10" height="10" fill="${c[0]}" stroke="${c[1]}"/>`;
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">${body}</svg>`;
+ return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
+}
+const PVW_ITEMS={
+ rod:pvwIconUrl('fishing_rod'), axe:pvwIconUrl('iron_axe'), seed:pvwIconUrl('wheat_seeds'), fish:pvwIconUrl('cod'),
+ sword1:pvwIconUrl('wooden_sword'), sword2:pvwIconUrl('stone_sword'), sword3:pvwIconUrl('iron_sword'), sword4:pvwIconUrl('golden_sword'), sword5:pvwIconUrl('diamond_sword'), sword6:pvwIconUrl('netherite_sword'),
+ dimensioner:pvwIconUrl('ender_pearl'), life:pvwIconUrl('potion'), eye:pvwIconUrl('ender_eye'), bread:pvwIconUrl('bread'),
+ helmet1:pvwIconUrl('leather_helmet'),helmet2:pvwIconUrl('iron_helmet'),helmet3:pvwIconUrl('golden_helmet'),helmet4:pvwIconUrl('diamond_helmet'),helmet5:pvwIconUrl('netherite_helmet'),
+ chest1:pvwIconUrl('leather_chestplate'),chest2:pvwIconUrl('iron_chestplate'),chest3:pvwIconUrl('golden_chestplate'),chest4:pvwIconUrl('diamond_chestplate'),chest5:pvwIconUrl('netherite_chestplate'),
+ legs1:pvwIconUrl('leather_leggings'),legs2:pvwIconUrl('iron_leggings'),legs3:pvwIconUrl('golden_leggings'),legs4:pvwIconUrl('diamond_leggings'),legs5:pvwIconUrl('netherite_leggings'),
+ boots1:pvwIconUrl('leather_boots'),boots2:pvwIconUrl('iron_boots'),boots3:pvwIconUrl('golden_boots'),boots4:pvwIconUrl('diamond_boots'),boots5:pvwIconUrl('netherite_boots')
+};
+const PVW_slotItems=[
+ {id:'rod',name:'낚싯대',custom:'🎣',get:()=>1}, {id:'axe',name:'도끼',custom:'🪓',get:()=>axes}, {id:'seed',name:'씨앗',custom:'🌱',get:()=>seeds},
+ {id:'fish',name:'물고기',custom:'🐟',get:()=>fish}, {id:'weapon',name:'무기',get:()=>swordTier||incineratorBulwark?1:0}, {id:'dimensioner',name:'차원석/차원이동기',custom:'🌀',get:()=>dimensioners},
+ {id:'life',name:'생명의 신수',custom:'🧪',get:()=>lifeElixirs}, {id:'eye',name:'엔더의 눈',custom:'👁️',get:()=>enderEyes}, {id:'bread',name:'빵',custom:'🍞',get:()=>window.pvwBread||0}
+];
+const PVW_invItems=[
+ {id:'wood',name:'나무',custom:'🪵',get:()=>wood},{id:'rice',name:'벼',custom:'🌾',get:()=>rice},{id:'gold',name:'코인',custom:'🪙',get:()=>coins},
+ {id:'netherStar',name:'네더의 별',custom:'⭐',get:()=>netherStars},{id:'dragon',name:'용의 숨결',custom:'💨',get:()=>dragonBreath},{id:'totem',name:'불사의 토템',custom:'🟨',get:()=>totems},
+ {id:'sword',name:'현재 검',custom:'⚔️',get:()=>swordTier},{id:'incinerator',name:incineratorUpgraded?'종언의 소각자':'소각자 + 불꽃의 보루',custom:'🔥',get:()=>incineratorBulwark?1:0},
+ {id:'enderShard',name:'엔더의 눈 조각',custom:'🧩',get:()=>enderEyeShards}
+];
+let pvwGridItems=PVW_invItems.slice();
+let pvwInvOpen=false,pvwSel=0,pvwMove=false,pvwPreviewRenderer=null,pvwPreviewScene=null,pvwPreviewCamera=null,pvwPreviewModel=null;
+function pvwMakeIcon(item,slot){slot.innerHTML='';if(!item)return;let custom=item.custom||'';if(item.id==='weapon')custom=(swordTier>0?'⚔️':(incineratorBulwark?'🔥':''));if(custom)slot.insertAdjacentHTML('beforeend','<span class="customIcon">'+custom+'</span>');if(item.get){const n=Number(item.get())||0;if(n>1){const c=document.createElement('span');c.className='count';c.textContent=n>9999?'9999':n;slot.appendChild(c)}}}
+function pvwArmorTier(){return Number(armorTier)||0}
+function pvwArmorImage(part){
+ const tier=pvwArmorTier();
+ if(ignitiumHelmet&&part==='helmet')return null;if(ignitiumChest&&part==='chest')return null;if(ignitiumLeggings&&part==='leggings')return null;if(ignitiumBoots&&part==='boots')return null;
+ if(tier<=0)return null; return PVW_ITEMS[part==='leggings'?'legs':part+''+tier]||PVW_ITEMS[part+'5'];
+}
+function pvwRenderArmor(){
+ document.querySelectorAll('.pvw-aslot').forEach(s=>{s.innerHTML='';const part=s.dataset.armor;let url=null;
+  const ign=(part==='helmet'&&ignitiumHelmet)||(part==='chest'&&ignitiumChest)||(part==='leggings'&&ignitiumLeggings)||(part==='boots'&&ignitiumBoots);
+  if(ign){const el=document.createElement('div');el.className='customIcon';el.textContent='🔥';s.appendChild(el);return;}
+  const tier=pvwArmorTier(); if(tier<=0)return; url=PVW_ITEMS[part==='leggings'?'legs'+tier:part+tier]; if(!url)return;const im=document.createElement('img');im.src=url;s.appendChild(im);
+ });
+}
+function pvwBuildHotbar(){const bar=document.getElementById('pvw-hotbar');bar.innerHTML='';PVW_slotItems.forEach((it,i)=>{const s=document.createElement('div');s.className='pvw-hslot'+(pvwSel===i?' sel':'')+(pvwMove&&pvwSel===i?' move':'');s.dataset.i=i;s.innerHTML='<span class="num">'+(i+1)+'</span>';pvwMakeIcon(it,s);s.onclick=()=>{pvwSel=i;pvwSelectHotbar(i);pvwRefresh()};bar.appendChild(s)})}
+function pvwSelectHotbar(i){const codes=['rod','axe','seed','fish','weapon','dimensioner','life','eye','bread'];const code=codes[i];if(i===0)equippedTool='rod';if(i===1&&axes>0)equippedTool='axe';if(i===2&&seeds>0)equippedTool='seed';if(i===3&&fish>0)equippedTool='fish';if(i===4){if(incineratorBulwark)equippedTool='incinerator';else if(swordTier>0)equippedTool='sword'}if(i===5&&dimensioners>0){equippedTool='dimensioner';equippedDimensioner=true}if(i===6&&lifeElixirs>0)equippedTool='lifeElixir';if(i===7&&enderEyes>0)equippedTool='enderEye';if(i===8&&window.pvwBread>0)equippedTool='bread';if(typeof updateHUD==='function')updateHUD()}
+function pvwInventoryItems(){const a=[...pvwGridItems];while(a.length<27)a.push(null);return a.slice(0,27)}
+function pvwRenderGrid(){const g=document.getElementById('pvw-grid');g.innerHTML='';const a=pvwInventoryItems();a.forEach((it,i)=>{const s=document.createElement('div');s.className='pvw-slot'+(pvwSel===9+i?' sel':'')+(pvwMove&&pvwSel===9+i?' move':'');s.dataset.i=9+i;if(it)pvwMakeIcon(it,s);s.onclick=()=>{pvwSel=9+i;pvwRefresh()};g.appendChild(s)})}
+function pvwSetDetail(){const item=pvwSel<9?PVW_slotItems[pvwSel]:pvwInventoryItems()[pvwSel-9];const n=document.getElementById('pvw-detail-name'),t=document.getElementById('pvw-detail-text'),d=document.getElementById('pvw-detail-icon'),b=document.getElementById('pvw-equip');d.innerHTML='';b.style.display='none';if(!item){n.textContent='빈 슬롯';t.textContent='이 슬롯은 비어 있습니다.';return}n.textContent=item.name;if(item.img){const im=document.createElement('img');im.src=typeof item.img==='function'?item.img():item.img;d.appendChild(im)}else d.innerHTML='<span class="customIcon">'+(item.custom||'▣')+'</span>';t.textContent='수량: '+(Number(item.get&&item.get())||0)+'\nShift를 누르면 이동 모드로 전환됩니다.'}
+function pvwInitPreview(){const stage=document.getElementById('pvw-preview-stage');if(pvwPreviewRenderer)return;pvwPreviewScene=new THREE.Scene();pvwPreviewScene.background=new THREE.Color(0x101010);pvwPreviewCamera=new THREE.PerspectiveCamera(28,1,0.1,100);pvwPreviewCamera.position.set(0,2.0,7);pvwPreviewCamera.lookAt(0,1.25,0);pvwPreviewRenderer=new THREE.WebGLRenderer({antialias:true,alpha:false});pvwPreviewRenderer.setPixelRatio(Math.min(devicePixelRatio,2));stage.appendChild(pvwPreviewRenderer.domElement);const amb=new THREE.AmbientLight(0xffffff,1.8);pvwPreviewScene.add(amb);const dl=new THREE.DirectionalLight(0xffffff,1.4);dl.position.set(3,5,4);pvwPreviewScene.add(dl);pvwPreviewResize();window.addEventListener('resize',pvwPreviewResize)}
+function pvwPreviewResize(){if(!pvwPreviewRenderer)return;const st=document.getElementById('pvw-preview-stage');const w=Math.max(1,st.clientWidth),h=Math.max(1,st.clientHeight);pvwPreviewRenderer.setSize(w,h,false);pvwPreviewCamera.aspect=w/h;pvwPreviewCamera.updateProjectionMatrix()}
+function pvwRebuildPreview(){pvwInitPreview();if(pvwPreviewModel){pvwPreviewScene.remove(pvwPreviewModel);pvwPreviewModel.traverse(o=>{if(o.geometry)o.geometry.dispose?.();if(o.material)o.material.dispose?.()})}const g=new THREE.Group();const tier=pvwArmorTier();const skin=0xf0b892;const armorColor=[0xf0b892,0xb5651d,0xb8bcc2,0xffd700,0x87ceeb,0x343434][tier]||0xf0b892;const normalSword=(equippedTool==='sword'&&swordTier>0)?(swordStats[swordTier]?.color||0x888888):null;makeHumanoid(g,skin,armorColor,normalSword);if(ignitiumHelmet||ignitiumChest||ignitiumLeggings||ignitiumBoots){addArenaIgnitiumArmor(g)}if(equippedTool==='incinerator'&&incineratorBulwark)addArenaIncinerator(g);g.position.y=-0.45;g.scale.set(1.3,1.3,1.3);g.rotation.y=Math.PI;pvwPreviewScene.add(g);pvwPreviewModel=g}
+function pvwAnimatePreview(){if(pvwPreviewRenderer&&pvwPreviewModel){pvwPreviewModel.rotation.y+=0.004;pvwPreviewRenderer.render(pvwPreviewScene,pvwPreviewCamera)}requestAnimationFrame(pvwAnimatePreview)}
+pvwAnimatePreview();
+function pvwRefresh(){pvwBuildHotbar();pvwRenderArmor();pvwRenderGrid();pvwSetDetail();if(pvwInvOpen)pvwRebuildPreview()}
+function pvwOpen(){pvwSel=9;pvwInvOpen=true;document.getElementById('pvw-inventory').classList.add('open');document.getElementById('pvw-inventory').setAttribute('aria-hidden','false');pvwRefresh()}
+function pvwClose(){pvwInvOpen=false;pvwMove=false;document.getElementById('pvw-inventory').classList.remove('open');document.getElementById('pvw-inventory').setAttribute('aria-hidden','true')}
+document.getElementById('pvw-inv-close').onclick=pvwClose;
+document.addEventListener('keydown',e=>{
+ if(e.code==='KeyE'&&!tradeOpen&&!document.getElementById('chatBox')?.contains(document.activeElement)){e.preventDefault();if(pvwInvOpen)pvwClose();else pvwOpen();return}
+ if(!pvwInvOpen)return;
+ if(e.code==='Escape'){e.preventDefault();pvwClose();return}
+ if(e.key==='Shift'&&!e.repeat){e.preventDefault();pvwMove=!pvwMove;pvwRefresh();return}
+ if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+  e.preventDefault();
+  if(pvwSel<9)return;
+  const idx=pvwSel-9;let ni=idx;
+  if(e.key==='ArrowLeft')ni=Math.max(0,idx-1);
+  if(e.key==='ArrowRight')ni=Math.min(26,idx+1);
+  if(e.key==='ArrowUp')ni=Math.max(0,idx-9);
+  if(e.key==='ArrowDown')ni=Math.min(26,idx+9);
+  if(pvwMove&&ni!==idx){const tmp=pvwGridItems[idx]||null;pvwGridItems[idx]=pvwGridItems[ni]||null;pvwGridItems[ni]=tmp;pvwSel=9+ni;}else if(!pvwMove){pvwSel=9+ni;}
+  pvwRefresh();
+ }
+});
+window.addEventListener('keyup',e=>{if(e.key==='Shift'&&pvwInvOpen){} });
+window.addEventListener('load',()=>{pvwRefresh();});
+
 })();
   </script>
   <div id="chatBox" style="display:none;position:fixed;left:18px;bottom:70px;width:520px;max-width:calc(100vw - 36px);z-index:9999;font-family:Arial,sans-serif;">
