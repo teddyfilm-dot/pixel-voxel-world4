@@ -3186,7 +3186,8 @@ function mpCreateRemote(p){
   makeHumanoid(g,0xf0b892,armorColor,gear==='normal'||gear==='sword'?(swordStats[p.swordTier]||swordStats[1]).color:null);
   if(gear==='ignitium')addArenaIgnitiumArmor(g);
   if(gear==='incinerator')addArenaIncinerator(g);
-  g.position.set(Number(p.x)||0,Number(p.y)-2.8,Number(p.z)||0);
+  g.scale.setScalar(1.3);
+  g.position.set(Number(p.x)||0,Number(p.y)-2.935,Number(p.z)||0);
   g.userData.mpPlayerId=p.id;
   g.frustumCulled=false;
   g.traverse(part=>{part.visible=true;part.frustumCulled=false;});
@@ -3198,7 +3199,7 @@ function mpUpdateRemote(p){
   let r=MP.remote.get(p.id);
   const gearKey=(p.gear||'normal')+'|'+(p.swordTier||0)+'|'+(p.armorTier||0)+'|'+JSON.stringify(p.ignitium||[]);
   if(!r||r.gearKey!==gearKey){if(r)scene.remove(r.group);r={group:mpCreateRemote(p),gearKey};MP.remote.set(p.id,r);}
-  r.group.position.set(Number(p.x)||0,Number(p.y)-2.8,Number(p.z)||0);
+  r.group.position.set(Number(p.x)||0,Number(p.y)-2.935,Number(p.z)||0);
   r.group.rotation.y=Number(p.rotationY)||0;
   r.group.visible=true;r.group.frustumCulled=false;r.group.traverse(part=>{part.visible=true;part.frustumCulled=false;});
   r.name=p.name||('플레이어 '+p.id);r.hp=p.hp;r.dueling=!!p.dueling;r.gear=p.gear||'normal';
