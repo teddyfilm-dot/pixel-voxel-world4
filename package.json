@@ -4,10 +4,6 @@
   "private": true,
   "description": "Pixel Voxel World World 4 multiplayer PvP server",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "ws": "^8.18.0"
-  }
+  "scripts": {"start": "node server.js"},
+  "dependencies": {"ws": "^8.18.0"}
 }
