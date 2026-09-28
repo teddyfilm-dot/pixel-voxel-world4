@@ -2769,6 +2769,113 @@ function updateLaser(){
 }
 
 document.addEventListener('keydown',e=>{
+if(isDead)return;
+if(tradeOpen&&(e.code==='ArrowUp'||e.code==='ArrowDown')){
+  e.preventDefault();
+  document.getElementById('trade-modal').scrollBy({top:e.code==='ArrowUp'?-120:120,behavior:'smooth'});
+  return;
+}
+keys[e.code]=true;
+if((e.code==='ShiftLeft'||e.code==='ShiftRight')&&currentWorld===4){tryStartArenaDuel();}
+if(e.code==='KeyK'&&laserSkill&&(keys['ShiftLeft']||keys['ShiftRight'])){startLaser();return;}
+if(e.code==='Digit1'){equippedTool='rod';updateHUD();return;}
+if(e.code==='Digit2'){if(axes>0){equippedTool='axe';updateHUD();}return;}
+if(e.code==='Digit3'){if(seeds>0){equippedTool='seed';updateHUD();}return;}
+if(e.code==='Digit4'){if(fish>0){equippedTool='fish';updateHUD();}return;}
+if(e.code==='KeyK'){
+if(equippedTool==='enderEye'){if(insertEnderEye())return;}
+if(equippedTool==='incinerator'){activateIncineratorBulwark();updateHUD();return;}
+if(laserSkill&&(keys['ShiftLeft']||keys['ShiftRight'])){startLaser();return;}
+if(equippedTool==='dimensioner'&&dimensioners>0){if(currentWorld===1)startWorld1Dungeon();else if(currentWorld===2)startDungeon();else if(currentWorld===3)startEndDungeon();return;}
+if(equippedTool==='fish'&&fish>0){fish--;eatFood(4,0);equippedTool='none';updateHUD();return;}
+if(equippedTool==='lifeElixir'&&lifeElixirs>0){lifeElixirs--;health=MAX_HEALTH;equippedTool='none';updateHUD();return;}
+if(isNearNPC(camera.position.x,camera.position.z)){
+tradeOpen=true;document.getElementById('trade-modal').style.display='block';document.getElementById('trade-msg').textContent='';updateFishingUpgradeUI();updateDimensionerDropUpgradeUI();updateIncineratorUpgradeUI();updateIgnitiumDragonUpgradeUI();return;
+}
+raycaster.set(camera.position,new THREE.Vector3(0,0,-1).applyEuler(camera.rotation));
+const bedHits=raycaster.intersectObjects(scene.children);
+let bedHit=null;
+for(let hit of bedHits){
+if(hit.object.userData.isBed||hit.object.parent.userData.isBed){bedHit=hit;break;}
+}
+if(bedHit&&bedHit.distance<5){
+if(isNight){
+const fade=document.getElementById('sleep-fade');
+fade.classList.add('sleeping');
+setTimeout(()=>{
+ isNight=false;dayTime=0;
+ monsters.forEach(m=>scene.remove(m));monsters=[];
+ scene.fog.far=100;renderer.setClearColor(currentWorld===2?0x3b1010:(currentWorld===3?0x1a1a2e:0x87CEEB));scene.fog.color.setHex(currentWorld===2?0x3b1010:0x87CEEB);updateHUD();
+ setTimeout(()=>fade.classList.remove('sleeping'),1000);
+},3000);
+}
+return;
+}
+if(tradeOpen){closeTrade();return;}
+raycaster.set(camera.position,new THREE.Vector3(0,0,-1).applyEuler(camera.rotation));
+const dHits=raycaster.intersectObjects(doors);
+if(dHits.length>0&&dHits[0].distance<4){
+const d=dHits[0].object;
+if(d.userData.open){d.position.set(d.userData.originalPos.x,d.userData.originalPos.y,d.userData.originalPos.z);d.userData.open=false;}
+else{d.position.y+=3;d.userData.open=true;}
+return;
+}
+if(equippedTool==='seed'){
+raycaster.set(camera.position,new THREE.Vector3(0,0,-1).applyEuler(camera.rotation));
+const farmHits=raycaster.intersectObjects([...farmBlocks]);
+if(farmHits.length>0&&farmHits[0].distance<5&&seeds>0){
+const fb=farmHits[0].object;
+const key=`${fb.userData.farmX},${fb.userData.farmZ}`;
+if(!seedBlocks.has(key)&&!riceBlocks.has(key)){
+seeds--;
+const seedGeo=new THREE.BoxGeometry(0.2,0.3,0.2);
+const seedBlock=new THREE.Mesh(seedGeo,seedMat);
+seedBlock.position.set(fb.userData.farmX,0.5,fb.userData.farmZ);
+seedBlock.userData.plantTime=Date.now();
+seedBlock.userData.farmX=fb.userData.farmX;
+seedBlock.userData.farmZ=fb.userData.farmZ;
+scene.add(seedBlock);
+seedBlocks.set(key,seedBlock);
+updateHUD();
+}
+}
+return;
+}
+if(!isFishing&&isNearWater(camera.position.x,camera.position.z)&&equippedTool==='rod'){
+isFishing=true;fishingIndicator.style.opacity='1';
+const fishingDuration=Math.max(0,5000-fishingLevel*100);
+fishTimer=setTimeout(()=>{
+fish++;updateHUD();isFishing=false;fishingIndicator.style.opacity='0';
+fishingIndicator.textContent='🐟 물고기를 잡았다!';
+setTimeout(()=>{fishingIndicator.textContent='🎣 낚시 중...';},1500);
+},fishingDuration);
+}
+}
+if(e.code==='Digit5'){if(incineratorBulwark){equippedTool='incinerator';updateHUD();}else if(swordTier>0){equippedTool='sword';updateHUD();}return;}
+if(e.code==='Digit6'){if(dimensioners>0){equippedTool='dimensioner';equippedDimensioner=true;updateHUD();}return;}
+if(e.code==='Digit7'){if(lifeElixirs>0){equippedTool='lifeElixir';updateHUD();}return;}
+if(e.code==='Digit8'){if(enderEyes>0){equippedTool='enderEye';updateHUD();}return;}
+if(e.code==='ArrowUp'||e.code==='ArrowDown')e.preventDefault();
+});
+document.addEventListener('keyup',e=>{keys[e.code]=false;});
+
+document.addEventListener('keyup',e=>{
+if(e.code==='KeyJ'&&equippedTool!=='axe'){
+raycaster.set(camera.position,new THREE.Vector3(0,0,-1).applyEuler(camera.rotation));
+const riceHits=raycaster.intersectObjects([...riceBlocks.values()]);
+if(riceHits.length>0&&riceHits[0].distance<5){
+const riceObj=riceHits[0].object;
+const key=`${riceObj.userData.farmX},${riceObj.userData.farmZ}`;
+scene.remove(riceObj);
+riceBlocks.delete(key);
+rice++;
+updateHUD();
+}
+}
+});
+
+
+document.addEventListener('keydown',e=>{
  if(/^Digit[1-9]$/.test(e.code)&&!pvwInvOpen&&!tradeOpen){const i=Number(e.code.slice(5))-1;pvwSel=i;pvwArmorSel=null;pvwSelectHotbar(i);pvwRefresh();return;}
  if(e.code==='KeyE'&&!tradeOpen&&!document.getElementById('chatBox')?.contains(document.activeElement)){e.preventDefault();if(pvwInvOpen)pvwClose();else pvwOpen();return}
  if(!pvwInvOpen)return;
@@ -2794,6 +2901,419 @@ document.addEventListener('keydown',e=>{
  pvwRefresh();
 });
 window.addEventListener('load',()=>{pvwRefresh();});
+
+function updateFrame(){
+if(isDead){renderer.render(scene,camera);requestAnimationFrame(update);return;}
+if(tradeOpen){renderer.render(scene,camera);requestAnimationFrame(update);return;}
+
+// 낮/밤 전환은 프레임 수가 아니라 실제 경과시간으로 계산한다.
+// 전환 순간 한 프레임이 멈추거나 검게 변하는 현상을 방지하기 위해
+// 렌더링 상태를 먼저 바꾸고 몬스터 생성은 다음 프레임 이후에 처리한다.
+const now=performance.now();
+const frameDelta=Math.min(50,Math.max(0,now-lastFrameTime));
+lastFrameTime=now;
+updateIgnitiumFires();
+if(currentWorld===4){
+  scene.fog.far=180;
+  renderer.setClearColor(0x87CEEB);
+  scene.fog.color.setHex(0x87CEEB);
+}else if(!inDungeon){
+  dayTime+=frameDelta;
+  if(dayTime>=DAY_NIGHT_HALF_CYCLE){
+    dayTime-=DAY_NIGHT_HALF_CYCLE;
+    isNight=!isNight;
+    nightTransitionLock=true;
+    if(isNight){
+      scene.fog.far=100;
+      renderer.setClearColor(currentWorld===2?0x240707:(currentWorld===3?0x1a1a2e:0x1a1a2e));
+    }else{
+      scene.fog.far=100;
+      renderer.setClearColor(currentWorld===2?0x3b1010:(currentWorld===3?0x1a1a2e:0x87CEEB));
+    }
+  }
+  if(isNight){
+    scene.fog.far=100;
+    renderer.setClearColor(currentWorld===2?0x240707:(currentWorld===3?0x1a1a2e:0x1a1a2e));
+    if(!nightTransitionLock && Date.now()-lastMonsterSpawn>MONSTER_SPAWN_INTERVAL){
+      spawnMonster();
+      lastMonsterSpawn=Date.now();
+    }
+    if(nightTransitionLock) setTimeout(()=>{nightTransitionLock=false;},100);
+  }
+}else if(isNight){
+  isNight=false; dayTime=0; nightTransitionLock=false; scene.fog.far=100; renderer.setClearColor(currentWorld===2?0x3b1010:(currentWorld===3?0x1a1a2e:0x87CEEB));
+}
+if(isNight||inDungeon||currentWorld===4)updateMonsters();
+if(currentWorld===4)updateArenaNPCs();
+if(dragonBoss)updateDragon(Date.now());
+if(currentWorld===3)updateEnderCrystals();
+if(inDungeon){for(const f of [...scene.children]){if(f.userData&&f.userData.ignisFire){const dx=camera.position.x-f.position.x,dz=camera.position.z-f.position.z;if(Math.hypot(dx,dz)<.75&&((f.userData.lastHit||0)+1000<=Date.now())){takeFireDamage(.5);f.userData.lastHit=Date.now();}}}}
+checkPortal();
+checkNetherLavaDamage();
+
+if(keys['ControlLeft']||keys['ControlRight']){hunger=Math.max(0,hunger-0.0008);}
+else if(keys['Space']||!onGround){hunger=Math.max(0,hunger-0.0004);}
+else if(keys['KeyW']||keys['KeyS']||keys['KeyA']||keys['KeyD']){hunger=Math.max(0,hunger-0.0002);}
+else if(saturation>0){saturation=Math.max(0,saturation-0.0001);}
+
+if(hunger>=5&&health<MAX_HEALTH&&saturation>0){health=Math.min(MAX_HEALTH,health+0.01);saturation-=0.01;}
+if(hunger<=0&&health>0.5){health=Math.max(0.5,health-0.02);}
+if(health<=0){die();}
+
+if(keys['KeyA'])yaw+=ROT_SPEED;
+if(keys['KeyD'])yaw-=ROT_SPEED;
+if(keys['ArrowUp'])pitch+=ROT_SPEED;
+if(keys['ArrowDown'])pitch-=ROT_SPEED;
+pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch));
+isCrouch=!(laserSkill&&(keys['ShiftLeft']||keys['ShiftRight']))&&(keys['ShiftLeft']||keys['ShiftRight']);
+let speed=WALK_SPEED;
+if((keys['ControlLeft']||keys['ControlRight'])&&hunger>=3)speed*=SPRINT_MULT;
+if(isCrouch)speed*=CROUCH_MULT;
+if(revivalSpeedUntil>Date.now())speed*=4;
+if((window._slow70Until||0)>Date.now())speed*=0.7;
+if((window._slow60Until||0)>Date.now())speed*=0.4;
+if((window._stunUntil||0)>Date.now())speed=0;
+
+let moveX=0,moveZ=0;
+if(keys['KeyW']){moveX=-Math.sin(yaw)*speed;moveZ=-Math.cos(yaw)*speed;}
+if(keys['KeyS']){moveX+=Math.sin(yaw)*speed;moveZ+=Math.cos(yaw)*speed;}
+
+const nextX=camera.position.x+moveX,nextZ=camera.position.z+moveZ;
+let collided=false;
+const collisionBlocks=(currentWorld===4)?arenaBlocks:blocks;
+for(let b of collisionBlocks){
+const dx=Math.abs(nextX-b.position.x),dz=Math.abs(nextZ-b.position.z);
+if(dx<0.4&&dz<0.4&&playerY<=b.position.y+1&&playerY+2>b.position.y){collided=true;break;}
+}
+if(!collided&&inDungeon&&dungeonRoom){
+for(const wall of dungeonRoom.children){
+if(!wall.userData.isDungeonWall)continue;
+const dx=Math.abs(nextX-wall.position.x),dz=Math.abs(nextZ-wall.position.z);
+if(dx<0.7&&dz<0.7&&playerY-2<=wall.position.y+1&&playerY>=wall.position.y){collided=true;break;}
+}
+}
+if(!collided&&((inArenaDuel&&arenaDuelRoom)||(window._mpPvpDuelActive&&window._mpDuelRoom))){
+ const duelCollisionRoom=(window._mpPvpDuelActive&&window._mpDuelRoom)?window._mpDuelRoom:arenaDuelRoom;
+for(const wall of duelCollisionRoom.children){
+if(!wall.userData.isDungeonWall)continue;
+const dx=Math.abs(nextX-wall.position.x),dz=Math.abs(nextZ-wall.position.z);
+if(dx<0.7&&dz<0.7&&playerY-2<=wall.position.y+1&&playerY>=wall.position.y){collided=true;break;}
+}
+}
+if(!collided){camera.position.x=nextX;camera.position.z=nextZ;}
+
+if(keys['Space']&&onGround){velY=JUMP_VEL;onGround=false;hunger=Math.max(0,hunger-0.3);}
+velY-=GRAVITY;
+if((window._levitateUntil||0)>Date.now())velY=Math.max(velY,0.05);
+playerY+=velY;
+if(playerY<=2.6){playerY=2.6;velY=0;onGround=true;}
+
+const viewOff=isCrouch?-0.6:0;
+camera.position.y=playerY+viewOff;
+camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;
+
+rodGroup.visible=equippedTool==='rod';
+axeGroup.visible=equippedTool==='axe';
+swordGroup.visible=swordTier>0&&equippedTool==='sword';
+incineratorGroup.visible=incineratorBulwark&&equippedTool==='incinerator';
+if(incineratorUpgraded&&incineratorGroup.visible)incineratorGuardCenter.rotation.y+=0.06;
+
+if(window._mpPvpDuelActive&&keys['KeyJ']){
+ window._mpPvpAttack();
+}else if(keys['KeyJ']&&incineratorBulwark&&equippedTool==='incinerator'){
+ fireIncineratorAttack();
+}else if(keys['KeyJ']&&swordTier>0&&(equippedTool==='sword'||inDungeon)&&Date.now()-lastSwordAttack>=SWORD_ATTACK_COOLDOWN&&!window._mpPvpDuelActive){
+const forward=new THREE.Vector3(0,0,-1).applyEuler(camera.rotation).normalize();
+let monster=null;
+let best=Infinity;
+for(const candidate of monsters){
+ if(!candidate||!candidate.parent||!candidate.userData||typeof candidate.userData.hp!=='number')continue;
+ if(candidate.userData.hp<=0)continue;
+ // 던전 안에서는 모델의 자식 메시/레이캐스트에 의존하지 않고 몬스터 그룹 자체를 판정한다.
+ // 따라서 월드2의 모든 몬스터 종류가 동일한 J 공격 판정을 사용한다.
+ const vx=candidate.position.x-camera.position.x;
+ const vy=(candidate.position.y+1.2)-camera.position.y;
+ const vz=candidate.position.z-camera.position.z;
+ const dist=Math.hypot(vx,vy,vz);
+ if(dist>5||dist<0.2)continue;
+ const dot=(vx*forward.x+vy*forward.y+vz*forward.z)/dist;
+ if(dot>=0.70&&dist<best){best=dist;monster=candidate;}
+}
+if(monster){
+ lastSwordAttack=Date.now();
+ const stats=swordStats[swordTier];
+ if(stats){
+   const wasAlive=monster.userData.hp>0;
+   handleMonsterDamage(monster,stats.damage*getPlayerAttackMultiplier(),stats.knockback);
+   if(wasAlive&&monster.userData.hp>0){
+     if(!monster.userData.baseColors){
+       monster.userData.baseColors=[];
+       monster.traverse(part=>{if(part.material&&part.material.color)monster.userData.baseColors.push({part,color:part.material.color.getHex()});});
+     }
+     monster.traverse(part=>{if(part.material&&part.material.color)part.material.color.setHex(0xff0000);});
+     setTimeout(()=>{
+       if(!monster||!monster.parent||!monster.userData||!monster.userData.baseColors)return;
+       monster.userData.baseColors.forEach(({part,color})=>{if(part&&part.material&&part.material.color)part.material.color.setHex(color);});
+     },150);
+   }
+   updateHUD();
+ }
+}
+}else if(keys['KeyJ']&&equippedTool==='axe'){
+raycaster.set(camera.position,new THREE.Vector3(0,0,-1).applyEuler(camera.rotation));
+const hits=raycaster.intersectObjects(blocks);
+if(hits.length>0&&hits[0].distance<5){
+if(!breaking||breakTarget!==hits[0].object){breaking=true;breakTime=0;breakTarget=hits[0].object;}
+breakTime+=16;breakFill.style.width=Math.min(breakTime/1200*100,100)+'%';breakIndicator.style.opacity='1';
+if(breakTime>=1200){
+if(breakTarget.material===woodMat||breakTarget.material.map===woodTex){wood++;hunger=Math.max(0,hunger-0.5);}
+scene.remove(breakTarget);blocks.splice(blocks.indexOf(breakTarget),1);
+const di=doors.indexOf(breakTarget);if(di>-1)doors.splice(di,1);
+updateHUD();
+breaking=false;breakTime=0;breakTarget=null;breakIndicator.style.opacity='0';breakFill.style.width='0%';
+}
+}
+}else{breaking=false;breakTime=0;breakTarget=null;breakIndicator.style.opacity='0';breakFill.style.width='0%';}
+
+updateHUD();
+updateLaser();
+renderer.render(scene,camera);
+requestAnimationFrame(update);
+}
+function update(){
+ try{
+   updateFrame();
+ }catch(err){
+   console.error('GAME LOOP ERROR:',err && (err.stack || err.message || err));
+   // 예외 하나 때문에 requestAnimationFrame이 끊겨 화면이 멈추는 것을 방지
+   try{renderer.render(scene,camera);}catch(renderErr){console.error('RENDER ERROR:',renderErr);}
+   requestAnimationFrame(update);
+ }
+}
+window.addEventListener('error',e=>console.error('GLOBAL ERROR:',e.error||e.message));
+update();
+
+window.addEventListener('resize',()=>{renderer.setSize(window.innerWidth,window.innerHeight);camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();});
+// ==================== 월드4 인터넷 멀티플레이 PvP ====================
+const MP={
+  socket:null, connected:false, joined:false, myId:null,
+  remote:new Map(), pendingChallenge:null, duelId:null, duelActive:false,
+  duelOpponentId:null, duelRoom:null, lastSend:0, lastAttack:0, shieldUntil:0,
+  lastWorld:currentWorld, reconnectTimer:null, toastTimer:null
+};
+
+function mpStatus(text){const el=document.getElementById('mp-status');if(el)el.textContent=text;}
+function mpToast(text,ms=1800){const el=document.getElementById('mp-toast');if(!el)return;el.textContent=text;el.style.display='block';clearTimeout(MP.toastTimer);MP.toastTimer=setTimeout(()=>el.style.display='none',ms);}
+function mpSend(obj){if(MP.socket&&MP.socket.readyState===WebSocket.OPEN)MP.socket.send(JSON.stringify(obj));}
+function mpGear(){
+  if(equippedTool==='incinerator'&&incineratorBulwark)return 'incinerator';
+  if(equippedTool==='sword'&&swordTier>0)return 'sword';
+  if(ignitiumHelmet||ignitiumChest||ignitiumLeggings||ignitiumBoots)return 'ignitium';
+  return 'normal';
+}
+function mpLoadout(){return {gear:mpGear(),swordTier:Number(swordTier)||0,armorTier:Number(armorTier)||0,ignitium:[!!ignitiumHelmet,!!ignitiumChest,!!ignitiumLeggings,!!ignitiumBoots],incinerator:!!incineratorBulwark};}
+function mpConnect(){
+  if(MP.connected||MP.socket&&MP.socket.readyState===WebSocket.CONNECTING)return;
+  if(location.protocol!=='http:'&&location.protocol!=='https:'){mpStatus('🌐 멀티플레이: 서버 주소로 실행하세요');return;}
+  const proto=location.protocol==='https:'?'wss':'ws';
+  try{MP.socket=new WebSocket(proto+'://'+location.host);}catch(e){mpStatus('🌐 멀티플레이: 연결 실패');return;}
+  MP.socket.addEventListener('open',()=>{MP.connected=true;mpStatus('🌐 멀티플레이: 서버 연결됨');if(currentWorld===4)mpJoinWorld4();});
+  MP.socket.addEventListener('message',e=>{try{mpMessage(JSON.parse(e.data));}catch(err){console.error('MP message error',err);}});
+  MP.socket.addEventListener('close',()=>{MP.connected=false;MP.joined=false;MP.myId=null;MP.duelActive=false;MP.duelId=null;MP.duelOpponentId=null;for(const [,r] of MP.remote){scene.remove(r.group);}MP.remote.clear();mpRenderList();mpStatus('🌐 멀티플레이: 연결 끊김 · 재연결 중... (게임은 계속 플레이 가능)');if(MP.reconnectTimer)clearTimeout(MP.reconnectTimer);MP.reconnectTimer=setTimeout(mpConnect,2500);});
+  MP.socket.addEventListener('error',()=>{mpStatus('🌐 멀티플레이: 서버 연결 오류');});
+}
+function mpJoinWorld4(){if(!MP.connected||MP.joined||currentWorld!==4)return;MP.joined=true;mpSend({type:'joinWorld4',x:camera.position.x,y:playerY,z:camera.position.z,rotationY:yaw,loadout:mpLoadout()});}
+function mpLeaveWorld4(){if(MP.connected&&MP.joined)mpSend({type:'leaveWorld4'});MP.joined=false;MP.duelActive=false;MP.duelId=null;MP.duelOpponentId=null;MP.shieldUntil=0;}
+function mpCreateRemote(p){
+  const g=new THREE.Group();
+  const gear=p.gear||'normal';
+  const armorColor=[0xf0b892,0xb5651d,0xb8bcc2,0xffd700,0x87ceeb,0x343434][Math.max(0,Math.min(5,Number(p.armorTier)||0))];
+  makeHumanoid(g,0xf0b892,armorColor,gear==='normal'||gear==='sword'?(swordStats[p.swordTier]||swordStats[1]).color:null);
+  if(gear==='ignitium')addArenaIgnitiumArmor(g);
+  if(gear==='incinerator')addArenaIncinerator(g);
+  g.position.set(p.x||0,p.y?Math.max(0,(p.y-1)):1,p.z||0);
+  g.userData.mpPlayerId=p.id;
+  g.frustumCulled=false;
+  g.traverse(part=>{part.visible=true;part.frustumCulled=false;});
+  scene.add(g);
+  return g;
+}
+function mpUpdateRemote(p){
+  if(p.id===MP.myId)return;
+  let r=MP.remote.get(p.id);
+  const gearKey=(p.gear||'normal')+'|'+(p.swordTier||0)+'|'+(p.armorTier||0)+'|'+JSON.stringify(p.ignitium||[]);
+  if(!r||r.gearKey!==gearKey){if(r)scene.remove(r.group);r={group:mpCreateRemote(p),gearKey};MP.remote.set(p.id,r);}
+  r.group.position.set(Number(p.x)||0,Math.max(0,(Number(p.y)||2.6)-1),Number(p.z)||0);
+  r.group.rotation.y=Number(p.rotationY)||0;
+  r.group.visible=true;r.group.frustumCulled=false;r.group.traverse(part=>{part.visible=true;part.frustumCulled=false;});
+  r.name=p.name||('플레이어 '+p.id);r.hp=p.hp;r.dueling=!!p.dueling;r.gear=p.gear||'normal';
+}
+function mpRenderList(players=[]){
+  const box=document.getElementById('mp-player-list');if(!box)return;
+  if(currentWorld!==4){box.style.display='none';return;}
+  box.style.display='block';
+  const arr=players.filter(p=>p.id!==MP.myId);
+  box.innerHTML='<div style="font-weight:700;margin-bottom:5px">👥 월드4 온라인: '+(players.length)+'</div>'+(arr.length?arr.map(p=>'<div style="padding:3px 0">🧍 '+escapeHtml(p.name||('플레이어 '+p.id))+(p.dueling?' <span style="color:#f87171">⚔️</span>':'')+'</div>').join(''):'<div style="color:#aaa">다른 플레이어 없음</div>');
+}
+function escapeHtml(s){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function mpMessage(m){
+  if(m.type==='welcome'){MP.myId=m.id;return;}
+  if(m.type==='players'){
+    const seen=new Set();
+    for(const p of (m.players||[])){seen.add(p.id);if(p.id!==MP.myId)mpUpdateRemote(p);}
+    for(const [id,r] of MP.remote){if(!seen.has(id)){scene.remove(r.group);MP.remote.delete(id);}}
+    mpRenderList(m.players||[]);return;
+  }
+  if(m.type==='challengeReceived'){
+    MP.pendingChallenge=m;const box=document.getElementById('mp-challenge');document.getElementById('mp-challenge-text').textContent=(m.fromName||'플레이어')+'님이 대결을 신청했습니다.';box.style.display='block';return;
+  }
+  if(m.type==='challengeSent'){mpToast((m.toName||'상대')+'님에게 대결을 신청했습니다.');return;}
+  if(m.type==='challengeRejected'){mpToast((m.fromName||'상대')+'님이 대결을 거절했습니다.');return;}
+  if(m.type==='duelStart'){mpBeginDuel(m);return;}
+  if(m.type==='pvpDamage'){
+    if(m.targetId===MP.myId){health=Math.max(0,Math.min(MAX_HEALTH,Number(m.hp)||0));if(health<=0)health=0;renderer.setClearColor(0xff0000);setTimeout(()=>{const bg=0x87CEEB;renderer.setClearColor(bg);if(scene.fog)scene.fog.color.setHex(bg);},100);updateHUD();}
+    if(m.attackerId===MP.myId&&m.crit)mpToast('⚔️ 치명타! '+m.damage+' 피해',500);
+    return;
+  }
+  if(m.type==='shieldBlocked'&&m.targetId===MP.myId){mpToast('🛡️ 불꽃의 보루가 공격을 막았습니다!',700);return;}
+  if(m.type==='duelEnd'){mpEndDuel(m);return;}
+  if(m.type==='playerLeft'&&m.playerId===MP.duelOpponentId){mpEndDuel({win:true,reason:'상대가 나갔습니다.'});return;}
+  if(m.type==='serverMessage'){mpToast(m.text||'',1500);return;}
+}
+function mpFindRemoteTarget(){
+  if(currentWorld!==4)return null;
+  const forward=new THREE.Vector3(0,0,-1).applyEuler(camera.rotation).normalize();let best=null,bestD=Infinity;
+  for(const [id,r] of MP.remote){if(!r.group.parent||r.dueling)continue;const dx=r.group.position.x-camera.position.x,dy=(r.group.position.y+1.2)-camera.position.y,dz=r.group.position.z-camera.position.z,d=Math.hypot(dx,dy,dz);if(d>10||d<.3)continue;const dot=(dx*forward.x+dy*forward.y+dz*forward.z)/d;if(dot>.72&&d<bestD){bestD=d;best={id,r};}}
+  return best;
+}
+window._mpTryChallenge=function(){
+  if(!MP.connected||!MP.joined||MP.duelActive)return false;
+  const t=mpFindRemoteTarget();if(!t)return false;mpSend({type:'challenge',targetId:t.id});return true;
+};
+function mpBeginDuel(m){
+  document.getElementById('mp-challenge').style.display='none';MP.pendingChallenge=null;MP.duelActive=true;MP.duelId=m.duelId;MP.duelOpponentId=m.opponentId;window._mpPvpDuelActive=true;health=MAX_HEALTH;updateHUD();
+  const room=mpCreateDuelRoom(m.roomSlot||0);MP.duelRoom=room;window._mpDuelRoom=room;
+  const bx=room.userData.baseX,bz=room.userData.baseZ;
+  const mine=m.role==='a'?{x:bx+10,z:bz+13}:{x:bx+10,z:bz+6};
+  camera.position.set(mine.x,2.6,mine.z);playerY=2.6;
+  const enemy={x:bx+10,z:m.role==='a'?bz+6:bz+13};camera.rotation.y=Math.atan2(-(enemy.x-mine.x),-(enemy.z-mine.z));camera.rotation.x=0;yaw=camera.rotation.y;pitch=0;
+  mpToast('⚔️ '+(m.opponentName||'상대')+'와 대결 시작!',1200);
+}
+function mpCreateDuelRoom(slot){
+  const roomGroup=new THREE.Group();const wallMat=new THREE.MeshLambertMaterial({color:0xC9A66B});const floorMat=new THREE.MeshLambertMaterial({color:0xD8B26E});const geo=new THREE.BoxGeometry(1,1,1);
+  const bx=ARENA_OFFSET_X+500+(Number(slot)||0)*25,bz=ARENA_OFFSET_Z+500;
+  for(let x=bx;x<bx+20;x++)for(let z=bz;z<bz+20;z++){const f=new THREE.Mesh(geo,floorMat);f.position.set(x,0,z);roomGroup.add(f);const c=new THREE.Mesh(geo,wallMat);c.position.set(x,7,z);roomGroup.add(c);}
+  for(let y=1;y<7;y++)for(let i=bx;i<bx+20;i++){for(const [x,z] of [[i,bz],[i,bz+19]]){const w=new THREE.Mesh(geo,wallMat);w.position.set(x,y,z);w.userData.isDungeonWall=true;roomGroup.add(w);}for(const [x,z] of [[bx,i],[bx+19,i]]){const w=new THREE.Mesh(geo,wallMat);w.position.set(x,y,z);w.userData.isDungeonWall=true;roomGroup.add(w);}}
+  roomGroup.userData.baseX=bx;roomGroup.userData.baseZ=bz;roomGroup.userData.isMpDuelRoom=true;scene.add(roomGroup);return roomGroup;
+}
+function mpStartShield(){if(MP.duelActive){MP.shieldUntil=Date.now()+5000;mpSend({type:'shieldStart'});}}
+window._mpStartShield=mpStartShield;
+window._mpPvpAttack=function(){
+  if(!MP.duelActive||!MP.connected)return;const now=Date.now();if(now-MP.lastAttack<350)return;MP.lastAttack=now;
+  let weapon='none',sTier=0;if(equippedTool==='incinerator'&&incineratorBulwark)weapon='incinerator';else if(equippedTool==='sword'&&swordTier>0){weapon='sword';sTier=swordTier;}else return;
+  const target=MP.remote.get(MP.duelOpponentId);if(!target||!target.group.parent)return;
+  const d=Math.hypot(target.group.position.x-camera.position.x,target.group.position.z-camera.position.z);if(d>5.5)return;
+  mpSend({type:'pvpAttack',targetId:MP.duelOpponentId,weapon,swordTier:sTier});
+};
+function mpEndDuel(m){
+  if(!MP.duelActive)return;MP.duelActive=false;MP.duelId=null;MP.duelOpponentId=null;window._mpPvpDuelActive=false;
+  if(MP.duelRoom){scene.remove(MP.duelRoom);MP.duelRoom=null;}window._mpDuelRoom=null;
+  if(m.returnPos){camera.position.set(Number(m.returnPos.x)||arenaShopX,2.6,Number(m.returnPos.z)||arenaShopZ+8);playerY=2.6;}
+  health=Math.max(1,Math.min(MAX_HEALTH,health));updateHUD();
+  mpToast(m.win?'🏆 승리!':'💀 패배!',1800);
+}
+document.getElementById('mp-accept').addEventListener('click',()=>{
+  if(MP.pendingChallenge){mpSend({type:'challengeAccept'});document.getElementById('mp-challenge').style.display='none';}
+});
+document.getElementById('mp-reject').addEventListener('click',()=>{
+  if(MP.pendingChallenge){mpSend({type:'challengeReject'});MP.pendingChallenge=null;document.getElementById('mp-challenge').style.display='none';}
+});
+// 위치/장비를 서버로 보내고, 월드4 입퇴장을 감시한다.
+setInterval(()=>{
+  if(!MP.connected){mpConnect();return;}
+  if(currentWorld===4&&!MP.joined)mpJoinWorld4();
+  if(currentWorld!==4&&MP.joined)mpLeaveWorld4();
+  if(currentWorld===4&&MP.joined){
+    mpSend({type:'state',x:camera.position.x,y:playerY,z:camera.position.z,rotationY:yaw,loadout:mpLoadout(),hp:health,shieldUntil:MP.shieldUntil});
+  }
+},50);
+mpConnect();
+
+window.grantGold=function(amount){
+  amount=Number(amount);
+  if(!Number.isFinite(amount)) return false;
+  coins+=amount;
+  updateHUD();
+  return true;
+};
+
+window.grantWorldTwo=function(){
+  bossCleared=true;
+  createNetherPortal();
+  setWorld(2);
+  if(netherPortal){netherPortal.visible=true;}
+  camera.position.set(37,2.6,8);
+  updateHUD();
+  return true;
+};
+
+// 채팅 명령어 /네더의 별: 네더의 별 1개 지급
+window.grantNetherStar=function(){
+  netherStars++;
+  updateHUD();
+  if(typeof showNetherStarReward==='function') showNetherStarReward();
+  return true;
+};
+
+// 채팅 명령어 /엔더의 눈: 엔더의 눈 1개 지급
+window.grantEnderEye=function(){
+  enderEyes++;
+  updateHUD();
+  return true;
+};
+
+// 채팅 명령어 /용의 숨결: 용의 숨결 1개 지급
+window.grantDragonBreath=function(){
+  dragonBreath++;
+  updateHUD();
+  return true;
+};
+
+// 채팅 명령어 /차원이동: 차원이동기를 실제로 사용한 것과 같은 던전 입장 처리
+window.enterDungeonByCommand=function(){
+  if(inDungeon) return false;
+  if(currentWorld===1){
+    const oldDimensioners=dimensioners;
+    const oldEquipped=equippedDimensioner;
+    dimensioners=Math.max(1,dimensioners);
+    equippedDimensioner=true;
+    const ok=startWorld1Dungeon();
+    if(!ok){ dimensioners=oldDimensioners; equippedDimensioner=oldEquipped; }
+    return !!ok;
+  }
+  if(currentWorld===2){
+    const oldDimensioners=dimensioners;
+    const oldEquipped=equippedDimensioner;
+    dimensioners=Math.max(1,dimensioners);
+    equippedDimensioner=true;
+    const ok=startDungeon();
+    if(!ok){ dimensioners=oldDimensioners; equippedDimensioner=oldEquipped; }
+    return !!ok;
+  }
+  if(currentWorld===3){
+    const oldDimensioners=dimensioners;
+    const oldEquipped=equippedDimensioner;
+    dimensioners=Math.max(1,dimensioners);
+    equippedDimensioner=true;
+    const ok=startEndDungeon();
+    if(!ok){ dimensioners=oldDimensioners; equippedDimensioner=oldEquipped; }
+    return !!ok;
+  }
+  return false;
+};
+
+document.getElementById('respawn-btn').addEventListener('click',()=>respawn());
+document.getElementById('menu-btn').addEventListener('click',()=>{location.reload();});
 
 })();
   </script>
